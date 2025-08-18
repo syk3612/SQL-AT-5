@@ -1,454 +1,131 @@
-// script.js
-const langNames = { mr: "MARATHI", hi: "HINDI", en: "ENGLISH" };
+const langNames = { mr: "मराठी", hi: "हिन्दी" };
+let currentLang = "mr"; // default
 
-/* -------------------------
-   Helpers
-   ------------------------- */
-function makeTable(headers, rows) {
-  let html = '<table class="sql-output"><thead><tr>';
-  headers.forEach(h => html += `<th>${h}</th>`);
-  html += '</tr></thead><tbody>';
-  rows.forEach(row => {
-    html += '<tr>';
-    row.forEach(cell => html += `<td>${cell === null ? 'NULL' : escapeHtml(cell)}</td>`);
-    html += '</tr>';
+const startTexts = {
+  mr: {
+    title: "SQL शिकायला सुरू करा",
+    sub: "डावीकडील विषय निवडा."
+  },
+  hi: {
+    title: "SQL सीखना शुरू कीजिए",
+    sub: "बाएँ तरफ से कोई विषय चुनें।"
+  }
+};
+
+
+// Lessons
+const lessons = {
+  mr: [
+    { id:"select", title:"SELECT स्टेटमेंट 🍀", emoji:"", desc:"SELECT म्हणजे डेटाबेस मधून माहिती घेण्यासाठी वापरतो.", longDesc:"SELECT स्टेटमेंटचा उपयोग table मधून हवे असलेले data मिळवण्यासाठी करतो, आपण specific columns निवडू शकतो", example:"SELECT नाव, वय FROM विद्यार्थी;", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]} },
+    { id:"where", title:"WHERE क्लॉज 🔍", emoji:"", desc:"WHERE म्हणजे अट लावणे.", longDesc:"WHERE क्लॉजचा उपयोग filter करण्यासाठी करतो. फक्त specific rows select करण्यासाठी." , example:"SELECT नाव FROM विद्यार्थी WHERE वय = 10;", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाव"], rows:[["स्नेहा"]]} },
+    { id:"orderby", title:"ORDER BY 📑", emoji:"", desc:"ORDER BY म्हणजे क्रम लावणे.", longDesc:"ORDER BY वापरून डेटा ascending किंवा descending क्रमात दाखवतो. जसे वय ascending क्रमात पाहणे.", example:"SELECT नाव, वय FROM विद्यार्थी ORDER BY वय ASC;", before:{headers:["नाव","वय"], rows:[["रोहित","12"],["स्नेहा","10"]]}, after:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]} },
+    { id:"and", title:"AND क्लॉज ➕", emoji:"", desc:"AND म्हणजे दोन्ही अटी पूर्ण व्हायला हव्यात.", longDesc:"AND वापरून एकाहून अधिक अटी लागू केल्या जातात. सर्व अटी खऱ्या असाव्यात तर row select होतो.", example:"SELECT नाव FROM विद्यार्थी WHERE वय=10 AND नाव='स्नेहा';", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","10"]]}, after:{headers:["नाव"], rows:[["स्नेहा"]]} },
+    { id:"or", title:"OR क्लॉज ⚡", emoji:"", desc:"OR म्हणजे एक अट पूर्ण झाली तरी चालते.", longDesc:"OR वापरून एखादी अट खऱ्या असल्यास row select होतो. जसे वय 10 किंवा नाव रोहित.", example:"SELECT नाव FROM विद्यार्थी WHERE वय=10 OR नाव='रोहित';", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"like", title:"LIKE क्लॉज 🔠", emoji:"", desc:"LIKE म्हणजे pattern match.", longDesc:"LIKE वापरून specific pattern match करून डेटा select करतो. जसे नाव 'र' ने सुरू होणारे.", example:"SELECT नाव FROM विद्यार्थी WHERE नाव LIKE 'र%';", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"]]}, after:{headers:["नाव"], rows:[["रोहित"]]} },
+    { id:"in", title:"IN क्लॉज 📦", emoji:"", desc:"IN म्हणजे list मधील value.", longDesc:"IN वापरून multiple values मधून data select करतो. जसे वय 10 किंवा 12.", example:"SELECT नाव FROM विद्यार्थी WHERE वय IN (10,12);", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"between", title:"BETWEEN क्लॉज 🎯", emoji:"", desc:"BETWEEN म्हणजे range मध्ये value.", longDesc:"BETWEEN वापरून two values मधील range select करतो. जसे 10 ते 12 वर्षांचे विद्यार्थी.", example:"SELECT नाव FROM विद्यार्थी WHERE वय BETWEEN 10 AND 12;", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["अमृता"],["रोहित"]]} },
+    { id:"anyall", title:"ANY आणि ALL 🌍", emoji:"", desc:"ANY म्हणजे कुठलीही value, ALL म्हणजे सर्व अटी true.", longDesc:"ANY आणि ALL वापरून subquery results filter करतो. ANY म्हणजे कुठलीही value match, ALL म्हणजे सर्व match.", example:"SELECT नाव FROM विद्यार्थी WHERE वय = ANY (10,12);", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"union", title:"UNION 🤝", emoji:"", desc:"UNION म्हणजे two queries merge.", longDesc:"UNION वापरून दोन query results एकत्र करतो आणि duplicates काढतो.", example:"SELECT नाव FROM विद्यार्थीA UNION SELECT नाव FROM विद्यार्थीB;", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"],["स्नेहा"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"]]} },
+    { id:"unionall", title:"UNION ALL 🔗", emoji:"", desc:"UNION ALL म्हणजे merge but duplicates retain.", longDesc:"UNION ALL वापरून two query results एकत्र करतो पण duplicates ठेवतो.", example:"SELECT नाव FROM विद्यार्थीA UNION ALL SELECT नाव FROM विद्यार्थीB;", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"],["स्नेहा"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"],["स्नेहा"]]} },
+    { id:"intersect", title:"INTERSECT ✂️", emoji:"", desc:"INTERSECT म्हणजे common values.", longDesc:"INTERSECT वापरून दोन queries मधील common rows select करतो.", example:"SELECT नाव FROM विद्यार्थीA INTERSECT SELECT नाव FROM विद्यार्थीB;", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"]]}, after:{headers:["नाव"], rows:[["रोहित"]]} },
+    { id:"minus", title:"MINUS ➖", emoji:"", desc:"MINUS म्हणजे first query मध्ये पण second मध्ये नाही.", longDesc:"MINUS वापरून first query मधील rows select करतो जे second query मध्ये नाहीत.", example:"SELECT नाव FROM विद्यार्थीA MINUS SELECT नाव FROM विद्यार्थीB;", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"],["अमृता"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["अमृता"]]} },
+    { id:"not", title:"NOT ❌", emoji:"", desc:"NOT म्हणजे उलट अट.", longDesc:"NOT वापरून अटी invert करतो. जसे, NOT IN वापरून specific values वगळतो.", example:"SELECT नाव FROM विद्यार्थी WHERE वय NOT IN (10);", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाव"], rows:[["रोहित"]]} },
+    { id:"exists", title:"EXISTS ✅", emoji:"", desc:"EXISTS म्हणजे subquery result आहे का तपासणे.", longDesc:"EXISTS वापरून तपासतो की subquery काही rows return करते का.", example:"SELECT नाव FROM विद्यार्थी WHERE EXISTS (SELECT 1 FROM गुण WHERE गुण>80);", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"notexists", title:"NOT EXISTS 🚫", emoji:"", desc:"NOT EXISTS म्हणजे result नाही का तपासणे.", longDesc:"NOT EXISTS वापरून तपासतो की subquery काही rows return करत नाही.", example:"SELECT नाव FROM विद्यार्थी WHERE NOT EXISTS (SELECT 1 FROM गुण WHERE गुण>90);", before:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]}, after:{headers:["नाव"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"null", title:"NULL Values 🕳️", emoji:"", desc:"NULL म्हणजे रिकामं value.", longDesc:"NULL values वापरून तपासतो की field मध्ये काही value नाही का.", example:"SELECT नाव FROM विद्यार्थी WHERE पत्ता IS NULL;", before:{headers:["नाव","पत्ता"], rows:[["स्नेहा","Mumbai"],["अमृता",null]]}, after:{headers:["नाव"], rows:[["अमृता"]]} },
+    { id:"insert", title:"INSERT INTO ➕", emoji:"", desc:"INSERT म्हणजे नवीन data टाकणे.", longDesc:"INSERT INTO वापरून नवीन rows add करतो. columns आणि values specify करतो.", example:"INSERT INTO विद्यार्थी (नाव, वय) VALUES ('अजय', 11);", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अजय","11"]]} },
+    { id:"update", title:"UPDATE ✏️", emoji:"", desc:"UPDATE म्हणजे जुना data बदलणे.", longDesc:"UPDATE वापरून table मधील existing data बदलतो. WHERE क्लॉजशिवाय सर्व rows update होतात.", example:"UPDATE विद्यार्थी SET वय = 13 WHERE नाव = 'रोहित';", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","13"]]} },
+    { id:"delete", title:"DELETE 🗑️", emoji:"", desc:"DELETE म्हणजे जुना data काढून टाकणे.", longDesc:"DELETE वापरून table मधील rows remove करतो. WHERE क्लॉजशिवाय सर्व rows delete होतात.", example:"DELETE FROM विद्यार्थी WHERE नाव = 'अजय';", before:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"],["अजय","11"]]}, after:{headers:["नाव","वय"], rows:[["स्नेहा","10"],["रोहित","12"]]} },
+    // ---- Joins, Aggregate functions (same as before in Marathi) ----
+  ],
+
+  hi: [
+    { id:"select", title:"SELECT स्टेटमेंट 🍀", emoji:"", desc:"SELECT का मतलब है डेटाबेस से जानकारी निकालना।", longDesc:"SELECT स्टेटमेंट का उपयोग table से ज़रूरी data निकालने के लिए होता है। हम specific columns चुन सकते हैं।", example:"SELECT नाम, उम्र FROM विद्यार्थी;", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"]]} },
+    { id:"where", title:"WHERE क्लॉज 🔍", emoji:"", desc:"WHERE का मतलब है शर्त लगाना।", longDesc:"WHERE क्लॉज का उपयोग data filter करने के लिए होता है। सिर्फ वही rows चुने जाते हैं जो condition पूरी करते हैं।", example:"SELECT नाम FROM विद्यार्थी WHERE उम्र = 10;", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"]]}, after:{headers:["नाम"], rows:[["स्नेहा"]]} },
+    { id:"orderby", title:"ORDER BY 📑", emoji:"", desc:"ORDER BY का मतलब है क्रम लगाना।", longDesc:"ORDER BY का उपयोग डेटा को ascending या descending क्रम में दिखाने के लिए होता है। जैसे उम्र ascending क्रम में।", example:"SELECT नाम, उम्र FROM विद्यार्थी ORDER BY उम्र ASC;", before:{headers:["नाम","उम्र"], rows:[["रोहित","12"],["स्नेहा","10"]]}, after:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"]]} },
+    { id:"and", title:"AND क्लॉज ➕", emoji:"", desc:"AND का मतलब है दोनों शर्तें पूरी होनी चाहिए।", longDesc:"AND का उपयोग एक से अधिक conditions को जोड़ने के लिए होता है। तभी row चुना जाता है जब सब conditions true हों।", example:"SELECT नाम FROM विद्यार्थी WHERE उम्र=10 AND नाम='स्नेहा';", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","10"]]}, after:{headers:["नाम"], rows:[["स्नेहा"]]} },
+    { id:"or", title:"OR क्लॉज ⚡", emoji:"", desc:"OR का मतलब है कोई भी एक शर्त पूरी होनी चाहिए।", longDesc:"OR का उपयोग तब होता है जब कोई भी condition true हो तो row चुना जाता है। जैसे उम्र 10 या नाम रोहित।", example:"SELECT नाम FROM विद्यार्थी WHERE उम्र=10 OR नाम='रोहित';", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाम"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"like", title:"LIKE क्लॉज 🔠", emoji:"", desc:"LIKE का मतलब है pattern match।", longDesc:"LIKE का उपयोग pattern match करके rows चुनने के लिए होता है। जैसे नाम 'र' से शुरू हो।", example:"SELECT नाम FROM विद्यार्थी WHERE नाम LIKE 'र%';", before:{headers:["नाम"], rows:[["स्नेहा"],["रोहित"],["अमृता"]]}, after:{headers:["नाम"], rows:[["रोहित"]]} },
+    { id:"in", title:"IN क्लॉज 📦", emoji:"", desc:"IN का मतलब है list में से value चुनना।", longDesc:"IN का उपयोग multiple values में से rows चुनने के लिए होता है। जैसे उम्र 10 या 12।", example:"SELECT नाम FROM विद्यार्थी WHERE उम्र IN (10,12);", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाम"], rows:[["स्नेहा"],["रोहित"]]} },
+    { id:"between", title:"BETWEEN क्लॉज 🎯", emoji:"", desc:"BETWEEN का मतलब है range के बीच का value।", longDesc:"BETWEEN का उपयोग दो values के बीच के rows चुनने के लिए होता है। जैसे 10 से 12 साल के विद्यार्थी।", example:"SELECT नाम FROM विद्यार्थी WHERE उम्र BETWEEN 10 AND 12;", before:{headers:["नाम","उम्र"], rows:[["स्नेहा","10"],["रोहित","12"],["अमृता","11"]]}, after:{headers:["नाम"], rows:[["स्नेहा"],["अमृता"],["रोहित"]]} },
+    // 👉 बाकी सारे lessons Marathi जैसे ही Hindi में अनुवाद करके इसी array में डालें
+  ]
+};
+
+// DOM Elements
+const landing = document.getElementById("landing");
+const app = document.getElementById("app");
+const topicList = document.getElementById("topicList");
+const lessonArea = document.getElementById("lessonArea");
+const contentTitle = document.querySelector(".content-title");
+const contentSub = document.querySelector(".content-sub");
+const langBtns = document.querySelectorAll(".btn");
+
+// Language selection
+langBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const lang = btn.dataset.lang;
+    if (lang === "mr" || lang === "hi") {
+      currentLang = lang;
+      landing.classList.add("hide");
+      app.classList.add("show");
+      document.getElementById("topicsTitle").textContent = `SQL - ${langNames[lang]}`;
+      loadTopics();
+
+      // 👇 Reset main page text according to selected language
+      contentTitle.textContent = startTexts[currentLang].title;
+      contentSub.textContent = startTexts[currentLang].sub;
+      lessonArea.innerHTML = ""; // clear any old lesson
+    }
   });
-  html += '</tbody></table>';
-  return html;
+});
+
+
+// Load topics in sidebar
+function loadTopics() {
+  topicList.innerHTML = "";
+  lessons[currentLang].forEach((lesson, idx) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="emoji">${lesson.emoji}</span> ${lesson.title}`;
+    li.addEventListener("click", () => selectLesson(idx, li));
+    topicList.appendChild(li);
+  });
 }
 
-function escapeHtml(str) {
-  if (str === null) return 'NULL';
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+// When topic is clicked
+function selectLesson(index, element) {
+  // Reset active
+  topicList.querySelectorAll("li").forEach(li => li.classList.remove("active"));
+  element.classList.add("active");
 
-function lesson(title, explanation, examples) {
-  return `
-    <h1 class="content-title">${title}</h1>
-    <p class="lesson-text">${explanation}</p>
-    ${examples.map(ex => `
-      <div class="example-block">
-        <p class="lesson-text">📌 <code>${escapeHtml(ex.query)}</code></p>
-        <div class="output-table">${ex.output}</div>
-      </div>
-    `).join('')}
+  const lesson = lessons[currentLang][index];
+
+  // Update lesson heading and description
+  contentTitle.innerHTML = `${lesson.emoji} ${lesson.title}`;
+  contentSub.innerHTML = `<p>${lesson.longDesc}</p>`;
+
+  lessonArea.innerHTML = `
+    <div class="example-block">
+      <strong>SQL Example:</strong>
+      <code>${lesson.example}</code>
+      <p class="output-caption before">Before:</p>
+      ${generateTable(lesson.before)}
+      <p class="output-caption after">After:</p>
+      ${generateTable(lesson.after)}
+    </div>
   `;
 }
 
-/* -------------------------
-   Sample data will be used to build outputs
-   ------------------------- */
-const TOYS_ROWS = [
-  [1, 'Car', 'Red', 'Car', 200],
-  [2, 'Train', 'Blue', 'Train', 150],
-  [3, 'Ball', 'Green', 'Ball', 50],
-  [4, 'Puzzle', 'Red', 'Puzzle', 300],
-  [5, 'Doll', 'Pink', 'Doll', 100]
-];
-
-const CUSTOMERS_ROWS = [
-  [1, 'Sahil', 'Pune'],
-  [2, 'Anita', 'Mumbai'],
-  [3, 'Ravi', 'Delhi']
-];
-
-const ORDERS_ROWS = [
-  [101, 1, 1],
-  [102, 1, 3],
-  [103, 2, 2]
-];
-
-const STUDENTS_ROWS = [
-  [1, 'Asha'],
-  [2, 'Vikram'],
-  [3, 'Neha']
-];
-
-const SPORTS_ROWS = [
-  ['Vikram'],
-  ['Rahul'],
-  ['Asha']
-];
-
-/* prebuilt HTML table snippets (for brief reuse) */
-const TOYS_TABLE = makeTable(['ID', 'Name', 'Color', 'Type', 'Price'], TOYS_ROWS);
-const CUSTOMERS_TABLE = makeTable(['ID','Name','City'], CUSTOMERS_ROWS);
-const ORDERS_TABLE = makeTable(['OrderID','CustomerID','ToyID'], ORDERS_ROWS);
-const STUDENTS_TABLE = makeTable(['ID','Name'], STUDENTS_ROWS);
-const SPORTS_TABLE = makeTable(['Name'], SPORTS_ROWS);
-
-/* -------------------------
-   Language click handling
-   ------------------------- */
-document.querySelectorAll('.btn[data-lang]').forEach(btn => {
-  btn.addEventListener('click', e => {
-    e.preventDefault();
-    const lang = btn.dataset.lang;
-    document.querySelector('.lang-name').textContent = langNames[lang] || "ENGLISH";
-    document.getElementById('landing').classList.add('hide');
-    const app = document.getElementById('app');
-    app.removeAttribute('aria-hidden');
-    app.classList.add('show');
-    window.scrollTo(0, 0);
+// Generate table HTML
+function generateTable(data) {
+  let html = "<table class='sql-output'><thead><tr>";
+  data.headers.forEach(h => html += `<th>${h}</th>`);
+  html += "</tr></thead><tbody>";
+  data.rows.forEach(row => {
+    html += "<tr>";
+    row.forEach(cell => html += `<td>${cell === null ? "NULL" : cell}</td>`);
+    html += "</tr>";
   });
-});
-
-/* -------------------------
-   Topic click handler — all lessons
-   ------------------------- */
-document.getElementById('topicList').addEventListener('click', e => {
-  if (!(e.target && e.target.tagName === 'LI')) return;
-  const topic = e.target.textContent.trim();
-  let contentHTML = '';
-
-  /* SELECT */
-  if (topic === "SELECT Statement") {
-    contentHTML = lesson(
-      "SELECT Statement",
-      "👶 SELECT म्हणजे SQL मध्ये विचारायचं की 'मला कुठली माहिती पाहिजे?' — जसे तुला फक्त खेळणीची नावं हवी आहेत तर SELECT वापरतो. SELECT * म्हणजे सगळं दाखव, SELECT Name म्हणजे फक्त नाव दाखव.",
-      [
-        { query: "SELECT * FROM Toys;", output: TOYS_TABLE },
-        { query: "SELECT Name, Price FROM Toys;", output: makeTable(['Name','Price'], TOYS_ROWS.map(r => [r[1], r[4]])) }
-      ]
-    );
-  }
-
-  /* WHERE */
-  else if (topic === "WHERE Clause") {
-    contentHTML = lesson(
-      "WHERE Clause",
-      "👶 WHERE म्हणजे 'अट लावणे' — फक्त ती नोंदी दाखवा ज्या एका विशिष्ट अटीला लागतात (उदा., लाल खेळणी, किंमत मोठी असलेली).",
-      [
-        { query: "SELECT * FROM Toys WHERE Color = 'Red';",
-          output: makeTable(['ID','Name','Color','Price'], TOYS_ROWS.filter(r => r[2]==='Red').map(r => [r[0], r[1], r[2], r[4]]))
-        },
-        { query: "SELECT Name FROM Toys WHERE Price > 150;",
-          output: makeTable(['Name','Price'], TOYS_ROWS.filter(r => r[4] > 150).map(r => [r[1], r[4]]))
-        }
-      ]
-    );
-  }
-
-  /* ORDER BY */
-  else if (topic === "ORDER BY") {
-    contentHTML = lesson(
-      "ORDER BY",
-      "👶 ORDER BY वापरून आपली माहिती क्रमबद्ध करतो — नावानुसार A→Z किंवा किमतीनुसार वरून खाली (DESC) इ. जसे खेळण्यांना सुबक रांगेत लावणे.",
-      [
-        { query: "SELECT * FROM Toys ORDER BY Name ASC;",
-          output: makeTable(['ID','Name'], TOYS_ROWS.slice().sort((a,b)=> a[1].localeCompare(b[1])).map(r=>[r[0], r[1]]))
-        },
-        { query: "SELECT * FROM Toys ORDER BY Price DESC;",
-          output: makeTable(['Name','Price'], TOYS_ROWS.slice().sort((a,b)=> b[4]-a[4]).map(r=>[r[1], r[4]]))
-        }
-      ]
-    );
-  }
-
-  /* AND */
-  else if (topic === "AND") {
-    contentHTML = lesson(
-      "AND",
-      "👶 AND म्हणजे 'दोन्ही अटी खर्या असायला हव्यात' — जसे लाल आणि Car प्रकार दोन्ही हवे असले पाहिजे.",
-      [
-        { query: "SELECT * FROM Toys WHERE Color='Red' AND Type='Car';",
-          output: makeTable(['ID','Name','Color','Type'], TOYS_ROWS.filter(r=> r[2]==='Red' && r[3]==='Car').map(r=>[r[0],r[1],r[2],r[3]]))
-        },
-        { query: "SELECT * FROM Toys WHERE Price>100 AND Color='Blue';",
-          output: makeTable(['ID','Name','Price','Color'], TOYS_ROWS.filter(r=> r[4]>100 && r[2]==='Blue').map(r=>[r[0],r[1],r[4],r[2]]))
-        }
-      ]
-    );
-  }
-
-  /* OR */
-  else if (topic === "OR") {
-    contentHTML = lesson(
-      "OR",
-      "👶 OR म्हणजे 'किंवा' — जरी एक अट खरी असली तरी चालते. (उदा., लाल किंवा Car).",
-      [
-        { query: "SELECT * FROM Toys WHERE Color='Red' OR Type='Car';",
-          output: makeTable(['ID','Name','Color','Type'],
-            TOYS_ROWS.filter(r=> r[2]==='Red' || r[3]==='Car').map(r=>[r[0],r[1],r[2],r[3]]))
-        },
-        { query: "SELECT * FROM Toys WHERE Price<100 OR Color='Green';",
-          output: makeTable(['Name','Price','Color'],
-            TOYS_ROWS.filter(r=> r[4]<100 || r[2]==='Green').map(r=>[r[1], r[4], r[2]]))
-        }
-      ]
-    );
-  }
-
-  /* LIKE */
-  else if (topic === "LIKE") {
-    contentHTML = lesson(
-      "LIKE",
-      "👶 LIKE वापरून आपण नावाचा पॅटर्न शोधतो. '%' म्हणजे 'काहीही अक्षरे'. उदा., 'C%' म्हणजे 'C' ने सुरू होणारे.",
-      [
-        { query: "SELECT * FROM Toys WHERE Name LIKE 'C%';",
-          output: makeTable(['ID','Name'], TOYS_ROWS.filter(r=> r[1].startsWith('C')).map(r=>[r[0], r[1]]))
-        },
-        { query: "SELECT * FROM Toys WHERE Name LIKE '%l';",
-          output: makeTable(['ID','Name'], TOYS_ROWS.filter(r=> r[1].endsWith('l')).map(r=>[r[0], r[1]]))
-        }
-      ]
-    );
-  }
-
-  /* IN */
-  else if (topic === "IN") {
-    contentHTML = lesson(
-      "IN",
-      "👶 IN म्हणजे 'त्यातला आहे का?' — एकाच वेळी अनेक मूल्ये तपासता येतात.",
-      [
-        { query: "SELECT * FROM Toys WHERE Color IN ('Red','Blue');",
-          output: makeTable(['ID','Name','Color'], TOYS_ROWS.filter(r=> ['Red','Blue'].includes(r[2])).map(r=>[r[0], r[1], r[2]]))
-        },
-        { query: "SELECT Name FROM Toys WHERE Type IN ('Car','Ball');",
-          output: makeTable(['Name'], TOYS_ROWS.filter(r=> ['Car','Ball'].includes(r[3])).map(r=>[r[1]]))
-        }
-      ]
-    );
-  }
-
-  /* BETWEEN */
-  else if (topic === "BETWEEN") {
-    contentHTML = lesson(
-      "BETWEEN",
-      "👶 BETWEEN म्हणजे 'दरम्यान' — दोन मूल्यांच्या मधल्या नोंदी (दोन्ही बाजू समाविष्ट).",
-      [
-        { query: "SELECT * FROM Toys WHERE Price BETWEEN 100 AND 250;",
-          output: makeTable(['ID','Name','Price'], TOYS_ROWS.filter(r=> r[4]>=100 && r[4]<=250).map(r=>[r[0], r[1], r[4]]))
-        },
-        { query: "SELECT Name FROM Toys WHERE Price BETWEEN 50 AND 150;",
-          output: makeTable(['Name'], TOYS_ROWS.filter(r=> r[4]>=50 && r[4]<=150).map(r=>[r[1]]))
-        }
-      ]
-    );
-  }
-
-  /* ANY and ALL */
-  else if (topic === "ANY and ALL") {
-    contentHTML = lesson(
-      "ANY and ALL",
-      "👶 ANY म्हणजे 'यादीतील कोणतेही एक' पुरेसे आहे; ALL म्हणजे 'सर्वांपेक्षा' म्हणून तुलना होते. (हे subquery/array संदर्भात कामी येते).",
-      [
-        { query: "SELECT * FROM Toys WHERE Price > ANY (100,200);",
-          output: makeTable(['Name','Price'], TOYS_ROWS.filter(r=> r[4] > 100).map(r=>[r[1], r[4]]))
-        },
-        { query: "SELECT * FROM Toys WHERE Price > ALL (50,100);",
-          output: makeTable(['Name','Price'], TOYS_ROWS.filter(r=> r[4] > 100).map(r=>[r[1], r[4]]))
-        }
-      ]
-    );
-  }
-
-  /* UNION */
-  else if (topic === "UNION") {
-    contentHTML = lesson(
-      "UNION",
-      "👶 UNION दोन SELECT चा योग करतो आणि duplicate काढून टाकतो — म्हणजे unique नोंदी परत.",
-      [
-        { query: "SELECT Name FROM Students UNION SELECT Name FROM Sports;",
-          output: makeTable(['Name'], Array.from(new Set(STUDENTS_ROWS.map(r=>r[1]).concat(SPORTS_ROWS.map(r=>r[0])))).map(n=>[n]))
-        },
-        { query: "SELECT Color FROM Toys UNION SELECT Color FROM Gifts;",
-          output: makeTable(['Color'], Array.from(new Set(TOYS_ROWS.map(r=>r[2]).concat(['Purple','Red']))).map(c=>[c]))
-        }
-      ]
-    );
-  }
-
-  /* UNION ALL */
-  else if (topic === "UNION ALL") {
-    contentHTML = lesson(
-      "UNION ALL",
-      "👶 UNION ALL एकत्र करते परंतु duplicates ठेवते — म्हणजे सर्व नोंदी जश्या आहेत तशा परत येतात.",
-      [
-        { query: "SELECT Name FROM Students UNION ALL SELECT Name FROM Sports;",
-          output: makeTable(['Name'], STUDENTS_ROWS.map(r=>[r[1]]).concat(SPORTS_ROWS.map(r=>[r[0]])))
-        },
-        { query: "SELECT Color FROM Toys UNION ALL SELECT Color FROM Gifts;",
-          output: makeTable(['Color'], TOYS_ROWS.map(r=>[r[2]]).concat([['Red']]))
-        }
-      ]
-    );
-  }
-
-  /* INTERSECT */
-  else if (topic === "INTERSECT") {
-    contentHTML = lesson(
-      "INTERSECT",
-      "👶 INTERSECT म्हणजे दोन्ही lists मधील common items परत करतो — म्हणजे common भाग.",
-      [
-        { query: "SELECT Name FROM Students INTERSECT SELECT Name FROM Sports;",
-          output: makeTable(['Name'], STUDENTS_ROWS.map(r=>r[1]).filter(n => SPORTS_ROWS.some(s=> s[0]===n)).map(n=>[n]))
-        },
-        { query: "SELECT Color FROM Toys INTERSECT SELECT Color FROM Gifts;",
-          output: makeTable(['Color'], ['Red'].map(c=>[c]))
-        }
-      ]
-    );
-  }
-
-  /* MINUS */
-  else if (topic === "MINUS") {
-    contentHTML = lesson(
-      "MINUS",
-      "👶 MINUS म्हणजे पहिल्या यादीतील जे items दुसऱ्या यादीत नाहीत ते परत करणे.",
-      [
-        { query: "SELECT Name FROM Toys MINUS SELECT Name FROM BrokenToys;",
-          output: makeTable(['Name'], TOYS_ROWS.map(r=>[r[1]])) // simplified example: show toys (pretend BrokenToys empty)
-        },
-        { query: "SELECT Color FROM Toys MINUS SELECT Color FROM Gifts;",
-          output: makeTable(['Color'], TOYS_ROWS.map(r=>[r[2]]).filter((v,i,self)=> self.indexOf(v)===i)) // unique toy colors
-        }
-      ]
-    );
-  }
-
-  /* NOT */
-  else if (topic === "NOT") {
-    contentHTML = lesson(
-      "NOT",
-      "👶 NOT म्हणजे अट उलट करणे — जिथे अट लागू होत नाही तिथल्या नोंदी परत करा.",
-      [
-        { query: "SELECT * FROM Toys WHERE NOT Color='Red';",
-          output: makeTable(['ID','Name','Color'], TOYS_ROWS.filter(r=> r[2] !== 'Red').map(r=>[r[0], r[1], r[2]]))
-        },
-        { query: "SELECT Name FROM Toys WHERE NOT Price>200;",
-          output: makeTable(['Name'], TOYS_ROWS.filter(r=> r[4] <= 200).map(r=>[r[1]]))
-        }
-      ]
-    );
-  }
-
-  /* EXISTS */
-  else if (topic === "EXISTS") {
-    contentHTML = lesson(
-      "EXISTS",
-      "👶 EXISTS तपासतो की दुसऱ्या टेबलमध्ये संबंधित नोंद आहे का — उदा., एखाद्या customer ने order दिलाय की नाही.",
-      [
-        { query: "SELECT Name FROM Customers c WHERE EXISTS (SELECT 1 FROM Orders o WHERE o.CustomerID = c.ID);",
-          output: makeTable(['Name'], CUSTOMERS_ROWS.filter(c => ORDERS_ROWS.some(o=> o[1] === c[0])).map(c=>[c[1]]))
-        },
-        { query: "SELECT * FROM Toys t WHERE EXISTS (SELECT 1 FROM Orders o WHERE o.ToyID = t.ID);",
-          output: makeTable(['ID','Name'], TOYS_ROWS.filter(t=> ORDERS_ROWS.some(o=> o[2] === t[0])).map(t=>[t[0],t[1]]))
-        }
-      ]
-    );
-  }
-
-  /* NOT EXISTS */
-  else if (topic === "NOT EXISTS") {
-    contentHTML = lesson(
-      "NOT EXISTS",
-      "👶 NOT EXISTS म्हणजे दुसऱ्या टेबलमध्ये जुळणारी नोंद नाही — जशी ग्राहकाने कोणतीही ऑर्डर दिलेली नाही.",
-      [
-        { query: "SELECT Name FROM Customers c WHERE NOT EXISTS (SELECT 1 FROM Orders o WHERE o.CustomerID = c.ID);",
-          output: makeTable(['Name'], CUSTOMERS_ROWS.filter(c => !ORDERS_ROWS.some(o=> o[1] === c[0])).map(c=>[c[1]]))
-        },
-        { query: "SELECT * FROM Toys t WHERE NOT EXISTS (SELECT 1 FROM Orders o WHERE o.ToyID = t.ID);",
-          output: makeTable(['ID','Name'], TOYS_ROWS.filter(t=> !ORDERS_ROWS.some(o=> o[2] === t[0])).map(t=>[t[0], t[1]]))
-        }
-      ]
-    );
-  }
-
-  /* NULL Values */
-  else if (topic === "NULL Values") {
-    contentHTML = lesson(
-      "NULL Values",
-      "👶 NULL म्हणजे माहिती उपलब्ध नाही — काही cell रिकामी (unknown). IS NULL आणि IS NOT NULL वापरून शोधता येते.",
-      [
-        { query: "SELECT * FROM Toys WHERE Price IS NULL;",
-          output: makeTable(['ID','Name','Price'], [[6, 'Robot', null]]) // example showing a NULL row
-        },
-        { query: "SELECT Name FROM Customers WHERE Phone IS NULL;",
-          output: makeTable(['Name'], [['Ravi']])
-        }
-      ]
-    );
-  }
-
-  /* INSERT INTO */
-  else if (topic === "INSERT INTO") {
-    contentHTML = lesson(
-      "INSERT INTO",
-      "👶 INSERT म्हणजे नवीन row टेबलमध्ये घालणे — जसे नवीन खेळणी बॉक्समध्ये ठेवणे. Before/After दाखवतो.",
-      [
-        {
-          query: "INSERT INTO Toys (ID,Name,Color,Type,Price) VALUES (6,'Robot','Silver','Robot',400);",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${TOYS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name','Color','Type','Price'], TOYS_ROWS.concat([[6,'Robot','Silver','Robot',400]]))}`
-        },
-        {
-          query: "INSERT INTO Customers (ID,Name,City) VALUES (4,'Priya','Pune');",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${CUSTOMERS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name','City'], CUSTOMERS_ROWS.concat([[4,'Priya','Pune']]))}`
-        }
-      ]
-    );
-  }
-
-  /* UPDATE */
-  else if (topic === "UPDATE") {
-    contentHTML = lesson(
-      "UPDATE",
-      "👶 UPDATE म्हणजे आधीच असलेल्या row ची माहिती बदलणे — जसे खेळण्याचा रंग बदलला तर तो बदल नोंदीत करता येतो.",
-      [
-        {
-          query: "UPDATE Toys SET Color='Blue' WHERE Name='Car';",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${TOYS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name','Color'], TOYS_ROWS.map(r => r[1] === 'Car' ? [r[0], r[1], 'Blue'] : [r[0], r[1], r[2]]))}`
-        },
-        {
-          query: "UPDATE Customers SET City='Mumbai' WHERE Name='Sahil';",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${CUSTOMERS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name','City'], CUSTOMERS_ROWS.map(c => c[1] === 'Sahil' ? [c[0], c[1], 'Mumbai'] : c))}`
-        }
-      ]
-    );
-  }
-
-  /* DELETE */
-  else if (topic === "DELETE") {
-    contentHTML = lesson(
-      "DELETE",
-      "👶 DELETE म्हणजे एखादी row काढून टाकणे — जशी खराब झालेली खेळणी काढून टाकतो.",
-      [
-        {
-          query: "DELETE FROM Toys WHERE Name='Car';",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${TOYS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name'], TOYS_ROWS.filter(r => r[1] !== 'Car').map(r=>[r[0], r[1]]))}`
-        },
-        {
-          query: "DELETE FROM Customers WHERE City='Delhi';",
-          output: `<div class="output-caption"><strong>Before:</strong></div>${CUSTOMERS_TABLE}
-                   <div class="output-caption"><strong>After:</strong></div>
-                   ${makeTable(['ID','Name','City'], CUSTOMERS_ROWS.filter(c=> c[2] !== 'Delhi'))}`
-        }
-      ]
-    );
-  }
-
-  /* fallback */
-  else {
-    contentHTML = lesson(topic, "ही माहिती लवकरच भरली जाईल.", [
-      { query: `-- Example for ${topic}`, output: `<p class="lesson-text">उदाहरण लवकर येईल.</p>` },
-      { query: `-- Another example for ${topic}`, output: `<p class="lesson-text">उदाहरण 2 लवकर येईल.</p>` }
-    ]);
-  }
-
-  document.getElementById('contentArea').innerHTML = contentHTML;
-  document.querySelectorAll('#topicList li').forEach(li => li.classList.remove('active'));
-  e.target.classList.add('active');
-});
+  html += "</tbody></table>";
+  return html;
+}
