@@ -421,3 +421,31 @@ function generateTable(data) {
 }
 
 
+
+
+// Add responsive design for mobile
+function setupResponsiveDesign() {
+  const sidebar = document.getElementById("sidebar");
+  const toggleButton = document.createElement("button");
+  toggleButton.id = "sidebarToggle";
+  toggleButton.textContent = "☰";
+  toggleButton.classList.add("sidebar-toggle");
+
+  // Add toggle button to the header
+  document.querySelector("header").prepend(toggleButton);
+
+  // Toggle sidebar visibility on button click
+  toggleButton.addEventListener("click", () => {
+    sidebar.classList.toggle("show");
+  });
+
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener("click", (event) => {
+    if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
+      sidebar.classList.remove("show");
+    }
+  });
+}
+
+// Call the function on DOMContentLoaded
+document.addEventListener("DOMContentLoaded", setupResponsiveDesign);
