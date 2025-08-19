@@ -191,3 +191,17 @@ body {
   .topics-box { height: auto; max-height: 40vh; }
   .welcome { font-size: 2.2rem; }
 }
+
+/* Glowing animation for Welcome text */
+@keyframes glow {
+  0% { text-shadow: 0 0 8px #ffeb3b, 0 0 16px #ffeb3b; }
+  25% { text-shadow: 0 0 8px #00c853, 0 0 16px #00c853; }
+  50% { text-shadow: 0 0 8px #4fc3f7, 0 0 16px #4fc3f7; }
+  75% { text-shadow: 0 0 8px #ffb74d, 0 0 16px #ffb74d; }
+  100% { text-shadow: 0 0 8px #ffeb3b, 0 0 16px #ffeb3b; }
+}
+
+.welcome {
+  animation: glow 3s infinite;
+}
+
