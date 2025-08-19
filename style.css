@@ -205,3 +205,73 @@ body {
   animation: glow 3s infinite;
 }
 
+
+
+/* Additional Mobile Styles */
+@media (max-width: 600px) {
+  .card {
+    padding: 20px;
+    font-size: 0.9rem;
+  }
+
+  .welcome {
+    font-size: 1.8rem;
+  }
+
+  .sub {
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+
+  .lang-grid {
+    gap: 8px;
+  }
+
+  .app.show {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .topics-box {
+    height: auto;
+    max-height: 50vh;
+  }
+
+  .content {
+    padding: 16px;
+    font-size: 0.9rem;
+  }
+
+  .content-title {
+    font-size: 1.5rem;
+  }
+
+  .content-sub {
+    font-size: 0.9rem;
+  }
+
+  .lesson-text {
+    font-size: 0.95rem;
+  }
+
+  .example-block code {
+    font-size: 0.95rem;
+  }
+
+  .output-caption {
+    font-size: 0.9rem;
+  }
+
+  .sql-output {
+    font-size: 0.85rem;
+  }
+
+  .sql-output thead th,
+  .sql-output td {
+    padding: 6px;
+  }
+}
